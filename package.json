@@ -1,0 +1,66 @@
+{
+  "name": "walrus-session10",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:tatum-sui": "node --env-file=.env.local --import tsx scripts/tatum-sui-mainnet-smoke.ts",
+    "discover:suix5": "node --env-file=.env.local --import tsx scripts/tatum-suix5-discovery.ts",
+    "discover:suix5:active": "node --env-file=.env.local --import tsx scripts/tatum-suix5-discovery.ts --active-state-field",
+    "discover:suix5:table": "node --env-file=.env.local --import tsx scripts/tatum-suix5-discovery.ts --table",
+    "discover:suix5:events": "node --env-file=.env.local --import tsx scripts/tatum-suix5-discovery.ts --event-type",
+    "discover:suix5:transactions": "node --env-file=.env.local --import tsx scripts/tatum-suix5-discovery.ts --function",
+    "test:memwal": "node --env-file=.env.local --import tsx scripts/test-memwal-adapter.ts",
+    "worker:dry": "node --env-file=.env.local --import tsx worker/prediction-worker.ts --dry-run",
+    "worker:run": "node --env-file=.env.local --import tsx worker/prediction-worker.ts",
+    "snapshot:generate": "node --env-file=.env.local --import tsx scripts/generate-public-snapshot.ts",
+    "snapshot:publish:dry": "node --env-file=.env.local --import tsx scripts/publish-public-snapshot.ts --dry-run",
+    "snapshot:publish": "node --env-file=.env.local --import tsx scripts/publish-public-snapshot.ts",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "scheduler:dry": "SUIX5_SCHEDULER_DRY_RUN=true SUIX5_SCHEDULER_TEST_INTERVAL_MS=60000 node --env-file=.env.local --import tsx worker/prediction-scheduler.ts",
+    "pm2:start": "pm2 delete suix5-prediction-worker || true; pm2 start ecosystem.config.cjs --only suix5-prediction-worker --update-env",
+    "pm2:status": "pm2 status suix5-prediction-worker",
+    "pm2:logs": "pm2 logs suix5-prediction-worker",
+    "pm2:stop": "pm2 delete suix5-prediction-worker"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ajw72787/walrus-session10.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ajw72787/walrus-session10/issues"
+  },
+  "homepage": "https://github.com/ajw72787/walrus-session10#readme",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.7",
+    "@mysten-incubation/memwal": "^0.1.12",
+    "@mysten/seal": "^1.5.2",
+    "@mysten/sui": "^2.38.0",
+    "@protobuf-ts/grpc-transport": "^2.11.1",
+    "next": "^16.4.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.4",
+    "pm2": "^7.1.1",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
