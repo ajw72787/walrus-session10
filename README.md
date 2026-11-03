@@ -77,16 +77,15 @@ redeemable vault NAV, a vault accounting value, or a SUIX5 token market price.
 
 ## Calibration and learning status
 
-Each forecast carries a bounded score-derived confidence. It is explicitly
-labelled **uncalibrated** until at least 12 completed evaluations exist. After
-that threshold, the method multiplies raw confidence by the observed accuracy
-of prior evaluated forecasts (bounded to 10%–90%).
+Each forecast carries bounded score-derived confidence and is explicitly
+labelled **uncalibrated**. Pooled cross-horizon calibration is disabled.
 
-Current audited state (2026-11-02): 3 forecasts are pending and 0 are
-evaluated. Therefore past outcomes are **recorded by the implementation but do
-not currently influence confidence**, because there is no evaluation sample.
-The dashboard correctly reports no directional accuracy and marks confidence
-uncalibrated.
+New forecasts also record a Walrus-evidenced, horizon-specific historical
+reliability snapshot. It includes only completed same-horizon evaluations whose
+forecast and evaluation records both have Walrus evidence and were available at
+issue time. The snapshot uses Beta(1,1) smoothing and remains **shadow-only**:
+it does not alter direction or confidence. The current counts and outcomes are
+published in the public snapshot rather than hardcoded here.
 
 ## Walrus Mainnet evidence
 
@@ -96,11 +95,10 @@ written as structured immutable records. The ignored local index records each
 Walrus memory/blob ID, and the public snapshot exposes those identifiers as
 persistence evidence without exposing raw private inputs.
 
-An SDK metadata walk on 2026-11-02 confirmed **6 distinct active Mainnet
-memories** in this namespace. The operational index links 3 of them to actual
-forecasts and none to evaluations. That is below the submission target of 10
-meaningful memories; verification/setup records must not be presented as 10
-prediction or evaluation outcomes. See [submission checklist](docs/submission-checklist.md).
+The public snapshot and operational index show the current linked forecast and
+evaluation evidence. Do not substitute setup records for meaningful prediction
+or evaluation outcomes when assessing submission evidence. See
+[submission checklist](docs/submission-checklist.md).
 
 MemWal `listMemories()` is deterministic metadata inventory; `recall()` is
 semantic and cannot guarantee exact recovery of every record. Loss of the
@@ -154,10 +152,9 @@ production scheduler without an operational review.
 
 ## Known limitations
 
-- The current audited record contains only 3 forecasts and 0 evaluations; it
-  does not yet satisfy a 10-meaningful-memory submission threshold.
-- No evaluated sample exists yet, so real confidence calibration and outcome
-  feedback have not been demonstrated.
+- Horizon-specific reliability is descriptive, not calibrated: overlapping
+  forecast horizons are correlated and the shadow analysis does not alter model
+  confidence or direction.
 - CoinGecko public price data can be rate-limited or stale; an invalid/stale
   input skips the prediction rather than inventing one.
 - The virtual-basket proxy is deliberately not represented as actual SUIX5 NAV

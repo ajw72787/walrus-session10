@@ -24,7 +24,7 @@ export function calculateForecast(
 	weightsBps: Record<string, number>,
 	horizonHours: HorizonHours,
 	nowMs: number,
-	priorEvaluations: { correct: boolean }[],
+	_priorEvaluations: { correct: boolean }[],
 ): ForecastCalculation {
 	const expectedAssets = Object.keys(weightsBps).sort();
 	if (expectedAssets.join(',') !== series.map((item) => item.asset).sort().join(',')) {
@@ -49,18 +49,16 @@ export function calculateForecast(
 	}
 	const score = weightedMomentum / Math.max(weightedVolatility, 0.0005);
 	const direction: Direction = score > 0.15 ? 'up' : score < -0.15 ? 'down' : 'flat';
-	const calibration = priorEvaluations.length >= 12
-		? priorEvaluations.filter((evaluation) => evaluation.correct).length / priorEvaluations.length
-		: null;
 	const rawConfidence = Math.min(0.85, 0.5 + Math.min(0.3, Math.abs(score) * 0.08));
-	const confidence = calibration === null ? rawConfidence : Math.min(0.9, Math.max(0.1, rawConfidence * calibration / 0.5));
 	return {
 		direction,
-		confidence,
+		// Pooled cross-horizon calibration is deliberately disabled. Per-horizon
+		// Walrus-backed reliability is recorded separately in shadow mode.
+		confidence: rawConfidence,
 		baselineProxyValue: 100,
 		baselinePrices,
 		sampledAt,
-		inputs: { weightedMomentum, weightedVolatility, score, calibration: calibration === null ? 'insufficient (<12 evaluations)' : String(calibration) },
+		inputs: { weightedMomentum, weightedVolatility, score, calibration: 'disabled (shadow-only horizon reliability)' },
 	};
 }
 

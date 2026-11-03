@@ -5,6 +5,7 @@ import { acquireWorkerLock, forecastId, readIndex, slotFor, updateIndex, type Fo
 import { readActiveSuiX5State } from '../lib/suix5-live.ts';
 import { buildPublicSnapshot, writePublicSnapshot } from '../lib/public-snapshot.ts';
 import { pollAcceptedWalrusJob } from '../lib/walrus-job-recovery.ts';
+import { historicalReliabilityAtIssue } from '../lib/historical-reliability.ts';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -223,18 +224,21 @@ async function main() {
 				continue;
 			}
 			const calculation = calculateForecast(series, state.weightsBps, horizonHours, now.getTime(), completed);
+			const issuedAt = new Date().toISOString();
+			const issuedAtMs = Date.parse(issuedAt);
 			const record: ForecastRecord = {
 				forecastId: id,
 				slotTimestamp: slot.toISOString(),
-				createdAt: now.toISOString(),
+				createdAt: issuedAt,
 				horizonHours,
-				maturityTimestamp: new Date(now.getTime() + horizonHours * 60 * 60 * 1000).toISOString(),
+				maturityTimestamp: new Date(issuedAtMs + horizonHours * 60 * 60 * 1000).toISOString(),
 				baselineProxyValue: calculation.baselineProxyValue,
 				baselineConstituentPricesUsd: calculation.baselinePrices,
 				targetWeightsBps: state.weightsBps,
 				direction: calculation.direction,
 				confidence: calculation.confidence,
 				methodVersion: METHOD_VERSION,
+				historicalReliability: historicalReliabilityAtIssue(index.forecasts, horizonHours, METHOD_VERSION, issuedAt),
 				priceSource: { provider: PRICE_SOURCE, identifiers: PRICE_SOURCE_IDENTIFIERS, sampledAt: calculation.sampledAt },
 				state: 'prepared',
 			};

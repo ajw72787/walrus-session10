@@ -19,6 +19,17 @@ export interface PublicSnapshot {
 		direction: 'up' | 'down' | 'flat';
 		methodVersion: string;
 		confidence: { value: number; calibration: 'uncalibrated' | 'calibrated' };
+		historicalReliability?: {
+			version: 'walrus-horizon-reliability-v1';
+			mode: 'shadow';
+			horizonHours: 4 | 12 | 24;
+			cutoffTimestamp: string;
+			eligibleEvaluations: number;
+			correctEvaluations: number;
+			observedAccuracy: number | null;
+			smoothedReliability: number | null;
+			status: 'insufficient' | 'shadow';
+		};
 		status: 'pending' | 'evaluated' | 'write_pending';
 		evaluation?: { evaluatedAt: string; actualDirection: 'up' | 'down' | 'flat'; correct: boolean; evidence?: { memoryId: string; blobId: string } };
 		evidence?: { memoryId: string; blobId: string };
@@ -37,6 +48,7 @@ function publicForecast(record: ForecastRecord, calibration: 'uncalibrated' | 'c
 		direction: record.direction,
 		methodVersion: record.methodVersion,
 		confidence: { value: record.confidence, calibration },
+		...(record.historicalReliability ? { historicalReliability: record.historicalReliability } : {}),
 		status,
 		...(record.evaluation
 			? {
@@ -62,7 +74,7 @@ export function validatePublicSnapshot(snapshot: unknown): asserts snapshot is P
 	const value = snapshot as Record<string, unknown>;
 	if (value.schemaVersion !== PUBLIC_SNAPSHOT_SCHEMA_VERSION || !Array.isArray(value.forecasts)) throw new Error('invalid public snapshot schema');
 	for (const forecast of value.forecasts) {
-		requireKeys(forecast, ['id', 'issuedAt', 'maturityAt', 'horizonHours', 'direction', 'methodVersion', 'confidence', 'status', 'evaluation', 'evidence'], 'forecast');
+		requireKeys(forecast, ['id', 'issuedAt', 'maturityAt', 'horizonHours', 'direction', 'methodVersion', 'confidence', 'historicalReliability', 'status', 'evaluation', 'evidence'], 'forecast');
 		requireKeys((forecast as Record<string, unknown>).confidence, ['value', 'calibration'], 'forecast confidence');
 		const evidence = (forecast as Record<string, unknown>).evidence;
 		if (evidence !== undefined) requireKeys(evidence, ['memoryId', 'blobId'], 'forecast evidence');
@@ -72,6 +84,8 @@ export function validatePublicSnapshot(snapshot: unknown): asserts snapshot is P
 			const evaluationEvidence = (evaluation as Record<string, unknown>).evidence;
 			if (evaluationEvidence !== undefined) requireKeys(evaluationEvidence, ['memoryId', 'blobId'], 'evaluation evidence');
 		}
+		const historicalReliability = (forecast as Record<string, unknown>).historicalReliability;
+		if (historicalReliability !== undefined) requireKeys(historicalReliability, ['version', 'mode', 'horizonHours', 'cutoffTimestamp', 'eligibleEvaluations', 'correctEvaluations', 'observedAccuracy', 'smoothedReliability', 'status'], 'forecast historical reliability');
 	}
 }
 
@@ -83,7 +97,7 @@ export function materiallyEqualSnapshots(left: PublicSnapshot, right: PublicSnap
 export async function buildPublicSnapshot(now = new Date()): Promise<PublicSnapshot> {
 	const index = await readIndex(); // Invalid or absent index intentionally rejects rather than inventing public data.
 	const completed = index.forecasts.filter((forecast) => forecast.state === 'evaluated' && forecast.evaluation);
-	const calibration = completed.length >= 12 ? 'calibrated' : 'uncalibrated';
+	const calibration = 'uncalibrated' as const;
 	let suix5: PublicSnapshot['suix5'] = null;
 	if (process.env.TATUM_API_KEY) {
 		const state = await readActiveSuiX5State();
@@ -107,7 +121,7 @@ export async function buildPublicSnapshot(now = new Date()): Promise<PublicSnaps
 			limitations: [
 				'Forecasts use a normalized $100 virtual basket proxy, not redeemable SUIX5 NAV or a token market price.',
 				'On-chain NAV is not used while nav_valid is false.',
-				'Confidence is uncalibrated until at least 12 evaluated forecasts exist.',
+				'Confidence remains uncalibrated; Walrus-backed horizon reliability is informational shadow analysis only.',
 				'Walrus identifiers are persistence evidence; the local operational index is required for deterministic forecast inventory.',
 			],
 		},

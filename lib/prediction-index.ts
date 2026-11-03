@@ -13,6 +13,18 @@ export interface WalrusWriteJob {
 	terminalError?: string;
 }
 
+export interface HistoricalReliabilitySnapshot {
+	version: 'walrus-horizon-reliability-v1';
+	mode: 'shadow';
+	horizonHours: HorizonHours;
+	cutoffTimestamp: string;
+	eligibleEvaluations: number;
+	correctEvaluations: number;
+	observedAccuracy: number | null;
+	smoothedReliability: number | null;
+	status: 'insufficient' | 'shadow';
+}
+
 export interface ForecastRecord {
 	forecastId: string;
 	slotTimestamp: string;
@@ -25,6 +37,7 @@ export interface ForecastRecord {
 	direction: Direction;
 	confidence: number;
 	methodVersion: string;
+	historicalReliability?: HistoricalReliabilitySnapshot;
 	priceSource: { provider: string; identifiers: Record<string, string>; sampledAt: Record<string, string> };
 	state:
 		| 'prepared'

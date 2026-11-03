@@ -20,7 +20,15 @@ test('forecast calculation is deterministic and uses a 100-point basket baseline
 	const result = calculateForecast(series, weights, 4, now, []);
 	assert.equal(result.baselineProxyValue, 100);
 	assert.equal(result.direction, 'up');
-	assert.match(result.inputs.calibration, /insufficient/);
+	assert.match(result.inputs.calibration, /disabled/);
+});
+
+test('pooled evaluations cannot alter weighted-momentum direction or raw confidence', () => {
+	const withoutHistory = calculateForecast(series, weights, 4, now, []);
+	const withTwelveIncorrect = calculateForecast(series, weights, 4, now, Array.from({ length: 12 }, () => ({ correct: false })));
+	assert.equal(withTwelveIncorrect.direction, withoutHistory.direction);
+	assert.equal(withTwelveIncorrect.confidence, withoutHistory.confidence);
+	assert.match(withTwelveIncorrect.inputs.calibration, /disabled/);
 });
 
 test('proxy value and slot IDs are stable', () => {

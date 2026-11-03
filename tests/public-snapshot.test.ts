@@ -6,7 +6,7 @@ const snapshot: PublicSnapshot = {
 	schemaVersion: 1,
 	lastPublishedAt: '2026-11-02T00:00:00.000Z',
 	suix5: { generation: '2', targetWeightsBps: { SUI: 4000, WAL: 3049, DEEP: 1696, CETUS: 930, NAVX: 325 }, verifiedAt: '2026-11-02T00:00:00.000Z' },
-	forecasts: [{ id: 'forecast-1', issuedAt: '2026-11-02T00:00:00.000Z', maturityAt: '2026-11-02T04:00:00.000Z', horizonHours: 4, direction: 'up', methodVersion: 'weighted-momentum-v1', confidence: { value: 0.6, calibration: 'uncalibrated' }, status: 'pending', evidence: { memoryId: 'memory-id', blobId: 'blob-id' } }],
+	forecasts: [{ id: 'forecast-1', issuedAt: '2026-11-02T00:00:00.000Z', maturityAt: '2026-11-02T04:00:00.000Z', horizonHours: 4, direction: 'up', methodVersion: 'weighted-momentum-v1', confidence: { value: 0.6, calibration: 'uncalibrated' }, historicalReliability: { version: 'walrus-horizon-reliability-v1', mode: 'shadow', horizonHours: 4, cutoffTimestamp: '2026-11-02T00:00:00.000Z', eligibleEvaluations: 1, correctEvaluations: 1, observedAccuracy: 1, smoothedReliability: 2 / 3, status: 'insufficient' }, status: 'pending', evidence: { memoryId: 'memory-id', blobId: 'blob-id' } }],
 	summary: { totalForecasts: 1, pendingForecasts: 1, evaluatedForecasts: 0, directionalAccuracy: null },
 	dataQuality: { priceSource: 'CoinGecko', latestSourceSampleAt: null, limitations: ['proxy only'] },
 };
@@ -15,6 +15,7 @@ test('public snapshot accepts only the explicit public shape', () => {
 	validatePublicSnapshot(snapshot);
 	assert.throws(() => validatePublicSnapshot({ ...snapshot, privateKey: 'not-public' }), /non-public field/);
 	assert.throws(() => validatePublicSnapshot({ ...snapshot, forecasts: [{ ...snapshot.forecasts[0], baselineConstituentPricesUsd: { SUI: 1 } }] }), /non-public field/);
+	assert.throws(() => validatePublicSnapshot({ ...snapshot, forecasts: [{ ...snapshot.forecasts[0], historicalReliability: { ...snapshot.forecasts[0].historicalReliability!, internalIndexPath: '/private' } }] }), /non-public field/);
 });
 
 test('material comparison ignores publication timestamp only', () => {
