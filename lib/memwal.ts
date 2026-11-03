@@ -1,5 +1,27 @@
 import { MemWal } from '@mysten-incubation/memwal';
 
+export const REMEMBER_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+export const REMEMBER_JOB_POLL_INTERVAL_MS = 3_000;
+
+export interface RememberAcceptedJob {
+	jobId: string;
+	status: string;
+}
+
+export interface RememberCompletedJob {
+	id: string;
+	jobId?: string;
+	blobId: string;
+	namespace: string;
+}
+
+export interface RememberJobStatus {
+	jobId: string;
+	status: 'pending' | 'running' | 'uploaded' | 'done' | 'failed' | 'not_found';
+	blobId?: string;
+	error?: string;
+}
+
 export const SUIX5_MEMORY_NAMESPACE = 'suix5-market-intelligence-walrus-session10';
 const PRODUCTION_RELAYER_URL = 'https://relayer.memory.walrus.xyz';
 
@@ -39,11 +61,25 @@ export class WalrusMemoryAdapter {
 		return this.#client.health();
 	}
 
-	async remember(text: string, idempotencyKey?: string) {
+	async submitRemember(text: string, idempotencyKey: string): Promise<RememberAcceptedJob> {
 		const accepted = await this.#client.remember(text, {
 			idempotencyKey,
 		});
-		return this.#client.waitForRememberJob(accepted.job_id);
+		if (!accepted.job_id) throw new Error('MemWal accepted a remember request without a job_id');
+		return { jobId: accepted.job_id, status: accepted.status };
+	}
+
+	async waitForRememberJob(jobId: string): Promise<RememberCompletedJob> {
+		const saved = await this.#client.waitForRememberJob(jobId, {
+			timeoutMs: REMEMBER_JOB_TIMEOUT_MS,
+			pollIntervalMs: REMEMBER_JOB_POLL_INTERVAL_MS,
+		});
+		return { id: saved.id, jobId: saved.job_id, blobId: saved.blob_id, namespace: saved.namespace };
+	}
+
+	async getRememberStatus(jobId: string): Promise<RememberJobStatus> {
+		const status = await this.#client.getRememberStatus(jobId);
+		return { jobId: status.job_id, status: status.status, blobId: status.blob_id, error: status.error };
 	}
 
 	recall(query: string, limit = 5) {

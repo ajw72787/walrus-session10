@@ -8,10 +8,11 @@ async function main() {
 	const health = await memory.health();
 	console.log('health', JSON.stringify({ status: health.status, mode: health.mode, write_ready: health.write_ready }));
 
-	const saved = await memory.remember(text, testId);
+	const accepted = await memory.submitRemember(text, testId);
+	const saved = await memory.waitForRememberJob(accepted.jobId);
 	console.log(
 		'saved',
-		JSON.stringify({ id: saved.id, job_id: saved.job_id, blob_id: saved.blob_id, namespace: saved.namespace }),
+		JSON.stringify({ id: saved.id, job_id: saved.jobId, blob_id: saved.blobId, namespace: saved.namespace }),
 	);
 
 	const recalled = await memory.recall(testId, 5);

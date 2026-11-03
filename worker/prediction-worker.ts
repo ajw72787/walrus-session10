@@ -4,6 +4,7 @@ import { fetchAllHourlyHistory, latestPoint, PRICE_SOURCE, PRICE_SOURCE_IDENTIFI
 import { acquireWorkerLock, forecastId, readIndex, slotFor, updateIndex, type ForecastRecord, type HorizonHours } from '../lib/prediction-index.ts';
 import { readActiveSuiX5State } from '../lib/suix5-live.ts';
 import { buildPublicSnapshot, writePublicSnapshot } from '../lib/public-snapshot.ts';
+import { pollAcceptedWalrusJob } from '../lib/walrus-job-recovery.ts';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -23,16 +24,124 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 function forecastMemory(record: ForecastRecord): string {
-	return JSON.stringify({ kind: 'suix5_forecast', immutable: true, ...record });
+	const { walrusWrite: _walrusWrite, ...immutable } = record;
+	return JSON.stringify({ kind: 'suix5_forecast', immutable: true, ...immutable });
 }
 
 function evaluationMemory(record: ForecastRecord): string {
+	const { walrusWrite: _walrusWrite, ...evaluation } = record.evaluation ?? {};
 	return JSON.stringify({
 		kind: 'suix5_forecast_evaluation',
 		forecastId: record.forecastId,
 		linkedForecastWalrus: record.walrus,
-		...record.evaluation,
+		...evaluation,
 	});
+}
+
+async function resumeForecastWrite(memory: WalrusMemoryAdapter, record: ForecastRecord): Promise<boolean> {
+	if (!record.walrusWrite?.jobId) return false;
+	const result = await pollAcceptedWalrusJob(memory, record.walrusWrite);
+	if (result.kind === 'pending') {
+		console.warn('forecast_walrus_job_still_pending', JSON.stringify({ forecastId: record.forecastId, jobId: record.walrusWrite.jobId }));
+		return false;
+	}
+	if (result.kind === 'terminal_failure') {
+		await updateIndex((latest) => {
+			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+			if (target?.state === 'forecast_write_pending' && target.walrusWrite?.jobId === record.walrusWrite?.jobId) {
+				target.state = 'forecast_write_failed';
+				target.walrusWrite!.terminalStatus = result.status;
+				target.walrusWrite!.terminalError = result.error;
+			}
+		});
+		console.error('forecast_walrus_job_terminal_failure', JSON.stringify({ forecastId: record.forecastId, jobId: record.walrusWrite.jobId, status: result.status }));
+		return false;
+	}
+	await updateIndex((latest) => {
+		const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+		if (target?.state === 'forecast_write_pending' && target.walrusWrite?.jobId === record.walrusWrite?.jobId) {
+			target.walrus = { memoryId: result.saved.id, blobId: result.saved.blobId };
+			target.state = 'pending';
+		}
+	});
+	return true;
+}
+
+async function resumeEvaluationWrite(memory: WalrusMemoryAdapter, record: ForecastRecord): Promise<boolean> {
+	if (!record.evaluation?.walrusWrite?.jobId) return false;
+	const result = await pollAcceptedWalrusJob(memory, record.evaluation.walrusWrite);
+	if (result.kind === 'pending') {
+		console.warn('evaluation_walrus_job_still_pending', JSON.stringify({ forecastId: record.forecastId, jobId: record.evaluation.walrusWrite.jobId }));
+		return false;
+	}
+	if (result.kind === 'terminal_failure') {
+		await updateIndex((latest) => {
+			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+			if (target?.state === 'evaluation_write_unknown' && target.evaluation?.walrusWrite?.jobId === record.evaluation?.walrusWrite?.jobId) {
+				target.state = 'evaluation_write_failed';
+				target.evaluation!.walrusWrite!.terminalStatus = result.status;
+				target.evaluation!.walrusWrite!.terminalError = result.error;
+			}
+		});
+		console.error('evaluation_walrus_job_terminal_failure', JSON.stringify({ forecastId: record.forecastId, jobId: record.evaluation.walrusWrite.jobId, status: result.status }));
+		return false;
+	}
+	await updateIndex((latest) => {
+		const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+		if (target?.state === 'evaluation_write_unknown' && target.evaluation?.walrusWrite?.jobId === record.evaluation?.walrusWrite?.jobId) {
+				target.evaluation!.walrus = { memoryId: result.saved.id, blobId: result.saved.blobId };
+			target.state = 'evaluated';
+		}
+	});
+	return true;
+}
+
+async function submitForecastWrite(memory: WalrusMemoryAdapter, record: ForecastRecord): Promise<boolean> {
+	const idempotencyKey = `forecast-${record.forecastId}`;
+	await updateIndex((latest) => {
+		const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+		if (target?.state === 'prepared') {
+			target.state = 'forecast_submission_unknown';
+			target.walrusWrite = { idempotencyKey, submissionStartedAt: new Date().toISOString() };
+		}
+	});
+	try {
+		const accepted = await memory.submitRemember(forecastMemory(record), idempotencyKey);
+		await updateIndex((latest) => {
+			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+			if (target?.state === 'forecast_submission_unknown' && target.walrusWrite?.idempotencyKey === idempotencyKey) {
+				target.walrusWrite.jobId = accepted.jobId;
+				target.walrusWrite.acceptedAt = new Date().toISOString();
+				target.state = 'forecast_write_pending';
+			}
+		});
+	} catch (error: unknown) {
+		console.error('forecast_walrus_submission_unknown', JSON.stringify({ forecastId: record.forecastId, error: error instanceof Error ? error.message : String(error) }));
+		return false;
+	}
+	const latest = (await readIndex()).forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+	return latest ? resumeForecastWrite(memory, latest) : false;
+}
+
+async function submitEvaluationWrite(memory: WalrusMemoryAdapter, record: ForecastRecord): Promise<boolean> {
+	if (!record.evaluation) return false;
+	const idempotencyKey = `evaluation-${record.forecastId}`;
+	try {
+		const accepted = await memory.submitRemember(evaluationMemory(record), idempotencyKey);
+		await updateIndex((latest) => {
+			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+			if (target?.state === 'evaluation_submission_unknown' && target.evaluation?.walrusWrite?.idempotencyKey === idempotencyKey) {
+				target.evaluation.walrusWrite.jobId = accepted.jobId;
+				target.evaluation.walrusWrite.acceptedAt = new Date().toISOString();
+				target.state = 'evaluation_write_unknown';
+			}
+		});
+	} catch (error: unknown) {
+		console.error('evaluation_walrus_submission_unknown', JSON.stringify({ forecastId: record.forecastId, error: error instanceof Error ? error.message : String(error) }));
+		return false;
+	}
+	const latest = (await readIndex()).forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+	return latest ? resumeEvaluationWrite(memory, latest) : false;
 }
 
 async function reconcilePartialWrites(memory: WalrusMemoryAdapter): Promise<void> {
@@ -43,28 +152,22 @@ async function reconcilePartialWrites(memory: WalrusMemoryAdapter): Promise<void
 				console.log('dry_reconcile_forecast', record.forecastId);
 				continue;
 			}
-			const saved = await memory.remember(forecastMemory(record), `forecast-${record.forecastId}`);
-			await updateIndex((latest) => {
-				const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
-				if (target?.state === 'prepared') {
-					target.walrus = { memoryId: saved.id, blobId: saved.blob_id };
-					target.state = 'pending';
-				}
-			});
+			await submitForecastWrite(memory, record);
 		}
 		if (record.state === 'evaluation_write_unknown' && record.evaluation) {
 			if (dryRun) {
 				console.log('dry_reconcile_evaluation', record.forecastId);
 				continue;
 			}
-			const saved = await memory.remember(evaluationMemory(record), `evaluation-${record.forecastId}`);
-			await updateIndex((latest) => {
-				const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
-				if (target?.state === 'evaluation_write_unknown' && target.evaluation) {
-					target.evaluation.walrus = { memoryId: saved.id, blobId: saved.blob_id };
-					target.state = 'evaluated';
-				}
-			});
+			if (!record.evaluation.walrusWrite?.jobId) {
+				console.error('evaluation_walrus_job_missing_manual_recovery_required', record.forecastId);
+				continue;
+			}
+			await resumeEvaluationWrite(memory, record);
+		}
+		if (record.state === 'forecast_write_pending') await resumeForecastWrite(memory, record);
+		if (record.state === 'forecast_submission_unknown' || record.state === 'evaluation_submission_unknown') {
+			console.error('walrus_submission_unknown_manual_recovery_required', record.forecastId);
 		}
 	}
 }
@@ -91,19 +194,12 @@ async function evaluateMatured(memory: WalrusMemoryAdapter, now: Date): Promise<
 		await updateIndex((latest) => {
 			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
 			if (target?.state === 'pending') {
-				target.evaluation = evaluation;
-				target.state = 'evaluation_write_unknown';
+				target.evaluation = { ...evaluation, walrusWrite: { idempotencyKey: `evaluation-${record.forecastId}`, submissionStartedAt: new Date().toISOString() } };
+				target.state = 'evaluation_submission_unknown';
 			}
 		});
-		const saved = await memory.remember(evaluationMemory({ ...record, evaluation }), `evaluation-${record.forecastId}`);
-		await updateIndex((latest) => {
-			const target = latest.forecasts.find((forecast) => forecast.forecastId === record.forecastId);
-			if (target?.state === 'evaluation_write_unknown' && target.evaluation) {
-				target.evaluation.walrus = { memoryId: saved.id, blobId: saved.blob_id };
-				target.state = 'evaluated';
-			}
-		});
-		evaluated += 1;
+		const current = (await readIndex()).forecasts.find((forecast) => forecast.forecastId === record.forecastId);
+		if (current && await submitEvaluationWrite(memory, current)) evaluated += 1;
 	}
 	return evaluated;
 }
@@ -148,15 +244,7 @@ async function main() {
 			await updateIndex((latest) => {
 				if (!latest.forecasts.some((forecast) => forecast.forecastId === id)) latest.forecasts.push(record);
 			});
-			const saved = await memory.remember(forecastMemory(record), `forecast-${id}`);
-			await updateIndex((latest) => {
-				const target = latest.forecasts.find((forecast) => forecast.forecastId === id);
-				if (target?.state === 'prepared') {
-					target.walrus = { memoryId: saved.id, blobId: saved.blob_id };
-					target.state = 'pending';
-				}
-			});
-			created += 1;
+			if (await submitForecastWrite(memory, record)) created += 1;
 		}
 		console.log('run_summary', JSON.stringify({ dryRun, evaluated, created, activeGeneration: state.generation, slot: slot.toISOString() }));
 		if (!dryRun) {

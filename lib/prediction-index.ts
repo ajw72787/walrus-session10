@@ -4,6 +4,15 @@ import { dirname, join } from 'node:path';
 export type HorizonHours = 4 | 12 | 24;
 export type Direction = 'up' | 'down' | 'flat';
 
+export interface WalrusWriteJob {
+	idempotencyKey: string;
+	submissionStartedAt: string;
+	jobId?: string;
+	acceptedAt?: string;
+	terminalStatus?: 'failed' | 'not_found';
+	terminalError?: string;
+}
+
 export interface ForecastRecord {
 	forecastId: string;
 	slotTimestamp: string;
@@ -17,14 +26,25 @@ export interface ForecastRecord {
 	confidence: number;
 	methodVersion: string;
 	priceSource: { provider: string; identifiers: Record<string, string>; sampledAt: Record<string, string> };
-	state: 'prepared' | 'pending' | 'evaluation_write_unknown' | 'evaluated';
+	state:
+		| 'prepared'
+		| 'forecast_submission_unknown'
+		| 'forecast_write_pending'
+		| 'forecast_write_failed'
+		| 'pending'
+		| 'evaluation_submission_unknown'
+		| 'evaluation_write_unknown'
+		| 'evaluation_write_failed'
+		| 'evaluated';
 	walrus?: { memoryId: string; blobId: string };
+	walrusWrite?: WalrusWriteJob;
 	evaluation?: {
 		evaluatedAt: string;
 		actualProxyValue: number;
 		actualDirection: Direction;
 		correct: boolean;
 		walrus?: { memoryId: string; blobId: string };
+		walrusWrite?: WalrusWriteJob;
 	};
 }
 

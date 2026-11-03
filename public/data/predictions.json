@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastPublishedAt": "2026-11-02T20:11:34.323Z",
+  "lastPublishedAt": "2026-11-03T11:06:33.538Z",
   "suix5": {
     "generation": "2",
     "targetWeightsBps": {
@@ -10,7 +10,7 @@
       "CETUS": 930,
       "NAVX": 325
     },
-    "verifiedAt": "2026-11-02T20:11:34.323Z"
+    "verifiedAt": "2026-11-03T11:06:33.538Z"
   },
   "forecasts": [
     {
@@ -24,7 +24,16 @@
         "value": 0.8,
         "calibration": "uncalibrated"
       },
-      "status": "pending",
+      "status": "evaluated",
+      "evaluation": {
+        "evaluatedAt": "2026-11-03T08:00:00.234Z",
+        "actualDirection": "down",
+        "correct": true,
+        "evidence": {
+          "memoryId": "0b159d54-2723-4ee7-b2a1-2bb02b47e0c6",
+          "blobId": "ib_gyIo9j62PuuWZxfj5CNupRqsYeDcAKQOrUmQfaWw"
+        }
+      },
       "evidence": {
         "memoryId": "5e78fab1-cba1-4f63-adb9-2acdc9593f25",
         "blobId": "-Z_fAJ9I2iYAC2pHWFGsm4WOHrrlajEA5i48hh1lgdY"
@@ -67,9 +76,9 @@
   ],
   "summary": {
     "totalForecasts": 3,
-    "pendingForecasts": 3,
-    "evaluatedForecasts": 0,
-    "directionalAccuracy": null
+    "pendingForecasts": 2,
+    "evaluatedForecasts": 1,
+    "directionalAccuracy": 1
   },
   "dataQuality": {
     "priceSource": "CoinGecko Demo API market_chart",

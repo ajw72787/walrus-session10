@@ -15,6 +15,7 @@
     "worker:dry": "node --env-file=.env.local --import tsx worker/prediction-worker.ts --dry-run",
     "worker:run": "node --env-file=.env.local --import tsx worker/prediction-worker.ts",
     "snapshot:generate": "node --env-file=.env.local --import tsx scripts/generate-public-snapshot.ts",
+		"recovery:nov3-evaluation": "node --env-file=.env.local --import tsx scripts/recover-nov3-evaluation.ts",
     "snapshot:publish:dry": "node --env-file=.env.local --import tsx scripts/publish-public-snapshot.ts --dry-run",
     "snapshot:publish": "node --env-file=.env.local --import tsx scripts/publish-public-snapshot.ts",
     "dev": "next dev",
