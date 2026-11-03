@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastPublishedAt": "2026-11-03T12:01:45.413Z",
+  "lastPublishedAt": "2026-11-03T16:01:31.997Z",
   "suix5": {
     "generation": "2",
     "targetWeightsBps": {
@@ -10,9 +10,60 @@
       "CETUS": 930,
       "NAVX": 325
     },
-    "verifiedAt": "2026-11-03T12:01:45.413Z"
+    "verifiedAt": "2026-11-03T16:01:31.997Z"
   },
   "forecasts": [
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T16:00:00.000Z-4h",
+      "issuedAt": "2026-11-03T16:00:00.233Z",
+      "maturityAt": "2026-11-03T20:00:00.233Z",
+      "horizonHours": 4,
+      "direction": "up",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.7875423954741698,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "fd0d1bc5-bb40-48eb-9822-271eb5772b1e",
+        "blobId": "9wHGPZ0C8y-P-Pgv2zxs0RBVtVTjwkMD_JEQCiY_2IU"
+      }
+    },
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T16:00:00.000Z-12h",
+      "issuedAt": "2026-11-03T16:00:00.233Z",
+      "maturityAt": "2026-11-04T04:00:00.233Z",
+      "horizonHours": 12,
+      "direction": "up",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.8,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "17f02e30-a93b-4d4e-b824-4f0848c86a50",
+        "blobId": "jvaP7tEN1spE4PkUbo9Ua6OjQBn284oM7n8H58yjH3s"
+      }
+    },
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T16:00:00.000Z-24h",
+      "issuedAt": "2026-11-03T16:00:00.233Z",
+      "maturityAt": "2026-11-04T16:00:00.233Z",
+      "horizonHours": 24,
+      "direction": "up",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.6355775912828082,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "a5de22c1-d161-4c13-a8a7-f93a00b9de82",
+        "blobId": "bDAUz0PFJMWql87_XMlQyTGzC9MYWNg2JOgLQw9fQIE"
+      }
+    },
     {
       "id": "suix5-weighted-momentum-v1-2026-11-03T12:00:00.000Z-4h",
       "issuedAt": "2026-11-03T12:00:00.280Z",
@@ -135,14 +186,14 @@
     }
   ],
   "summary": {
-    "totalForecasts": 6,
-    "pendingForecasts": 4,
+    "totalForecasts": 9,
+    "pendingForecasts": 7,
     "evaluatedForecasts": 2,
     "directionalAccuracy": 0.5
   },
   "dataQuality": {
     "priceSource": "CoinGecko Demo API market_chart",
-    "latestSourceSampleAt": "2026-11-03T11:59:10.000Z",
+    "latestSourceSampleAt": "2026-11-03T15:59:00.000Z",
     "limitations": [
       "Forecasts use a normalized $100 virtual basket proxy, not redeemable SUIX5 NAV or a token market price.",
       "On-chain NAV is not used while nav_valid is false.",
