@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastPublishedAt": "2026-11-03T11:06:33.538Z",
+  "lastPublishedAt": "2026-11-03T12:01:45.413Z",
   "suix5": {
     "generation": "2",
     "targetWeightsBps": {
@@ -10,9 +10,60 @@
       "CETUS": 930,
       "NAVX": 325
     },
-    "verifiedAt": "2026-11-03T11:06:33.538Z"
+    "verifiedAt": "2026-11-03T12:01:45.413Z"
   },
   "forecasts": [
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T12:00:00.000Z-4h",
+      "issuedAt": "2026-11-03T12:00:00.280Z",
+      "maturityAt": "2026-11-03T16:00:00.280Z",
+      "horizonHours": 4,
+      "direction": "up",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.8,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "d7ccfcb1-340a-4963-8f8c-9d8379ce677c",
+        "blobId": "4WiRB0aMtl7kSquMMypSBNDx7GWZIXYPEltTNK4T4Co"
+      }
+    },
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T12:00:00.000Z-12h",
+      "issuedAt": "2026-11-03T12:00:00.280Z",
+      "maturityAt": "2026-11-04T00:00:00.280Z",
+      "horizonHours": 12,
+      "direction": "up",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.6720658956209368,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "72de2dd9-d69f-4abf-8a84-31f488ffa96c",
+        "blobId": "2JRkucrJhQEnc9uqeDwiKsQ07sUvo7dUQizqp__MoI0"
+      }
+    },
+    {
+      "id": "suix5-weighted-momentum-v1-2026-11-03T12:00:00.000Z-24h",
+      "issuedAt": "2026-11-03T12:00:00.280Z",
+      "maturityAt": "2026-11-04T12:00:00.280Z",
+      "horizonHours": 24,
+      "direction": "down",
+      "methodVersion": "weighted-momentum-v1",
+      "confidence": {
+        "value": 0.533310142010008,
+        "calibration": "uncalibrated"
+      },
+      "status": "pending",
+      "evidence": {
+        "memoryId": "22b58884-a57b-44be-9339-ee329d4ebc16",
+        "blobId": "eWvUW5KYBAxHbmItzgCidSUdLPb2vZ8cidx_tGcbgnM"
+      }
+    },
     {
       "id": "suix5-weighted-momentum-v1-2026-11-02T16:00:00.000Z-4h",
       "issuedAt": "2026-11-02T19:42:56.054Z",
@@ -50,7 +101,16 @@
         "value": 0.8,
         "calibration": "uncalibrated"
       },
-      "status": "pending",
+      "status": "evaluated",
+      "evaluation": {
+        "evaluatedAt": "2026-11-03T12:00:00.280Z",
+        "actualDirection": "up",
+        "correct": false,
+        "evidence": {
+          "memoryId": "d25c5050-557b-4ced-9522-f970cf8326ac",
+          "blobId": "9uAsGUBIccae0-9bRXFvqYFnt_ck4bNL_WoZmRDHizU"
+        }
+      },
       "evidence": {
         "memoryId": "20c45253-9bab-4c37-ad08-a39064f23960",
         "blobId": "R9vC7M4daOtN7LXDK_KWxi2f6Wx05kyCKxhSq-Sw1tg"
@@ -75,14 +135,14 @@
     }
   ],
   "summary": {
-    "totalForecasts": 3,
-    "pendingForecasts": 2,
-    "evaluatedForecasts": 1,
-    "directionalAccuracy": 1
+    "totalForecasts": 6,
+    "pendingForecasts": 4,
+    "evaluatedForecasts": 2,
+    "directionalAccuracy": 0.5
   },
   "dataQuality": {
     "priceSource": "CoinGecko Demo API market_chart",
-    "latestSourceSampleAt": "2026-11-02T19:43:00.000Z",
+    "latestSourceSampleAt": "2026-11-03T11:59:10.000Z",
     "limitations": [
       "Forecasts use a normalized $100 virtual basket proxy, not redeemable SUIX5 NAV or a token market price.",
       "On-chain NAV is not used while nav_valid is false.",
