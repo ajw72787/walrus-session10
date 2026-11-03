@@ -172,12 +172,11 @@ async function reconcilePartialWrites(memory: WalrusMemoryAdapter): Promise<void
 	}
 }
 
-async function evaluateMatured(memory: WalrusMemoryAdapter, now: Date): Promise<number> {
+async function evaluateMatured(memory: WalrusMemoryAdapter, now: Date, series: Awaited<ReturnType<typeof fetchAllHourlyHistory>>): Promise<number> {
 	const index = await readIndex();
 	const mature = index.forecasts.filter((forecast) => forecast.state === 'pending' && new Date(forecast.maturityTimestamp) <= now);
 	let evaluated = 0;
 	for (const record of mature) {
-		const series = await fetchAllHourlyHistory();
 		const prices = Object.fromEntries(series.map((item) => [item.asset, latestPoint(item, now.getTime(), 2 * 60 * 60 * 1000).priceUsd]));
 		const actualProxyValue = proxyValue(record.baselineConstituentPricesUsd, prices, record.targetWeightsBps);
 		const actualDirection = directionForProxy(actualProxyValue);
@@ -211,9 +210,9 @@ async function main() {
 		const state = await readActiveSuiX5State();
 		const memory = WalrusMemoryAdapter.fromEnvironment();
 		await reconcilePartialWrites(memory);
-		const evaluated = await evaluateMatured(memory, now);
-		const index = await readIndex();
 		const series = await fetchAllHourlyHistory();
+		const evaluated = await evaluateMatured(memory, now, series);
+		const index = await readIndex();
 		const completed = index.forecasts.filter((forecast) => forecast.state === 'evaluated' && forecast.evaluation).map((forecast) => ({ correct: forecast.evaluation!.correct }));
 		const slot = slotFor(now);
 		let created = 0;
